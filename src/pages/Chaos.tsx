@@ -28,7 +28,7 @@ const DISRUPTIONS: Array<{
 ];
 
 export default function Chaos() {
-  const { state, dispatch } = useWarehouse();
+  const { state, actions } = useWarehouse();
   const chaos = state.chaos;
   const plan = chaos.recoveryPlan;
   const active = chaos.active && chaos.disruptions.length > 0;
@@ -65,7 +65,7 @@ export default function Chaos() {
                   <button
                     key={d.kind}
                     type="button"
-                    onClick={() => dispatch({ type: "TRIGGER_CHAOS", kind: d.kind })}
+                    onClick={() => actions.triggerChaos(d.kind)}
                     className="group flex items-start gap-3 rounded-[3px] border border-border/70 bg-muted/30 p-3 text-left transition-colors hover:border-signal-red/50 hover:bg-signal-red/[0.06]"
                   >
                     <d.icon className="mt-0.5 size-4 shrink-0 text-signal-red" />
@@ -79,7 +79,7 @@ export default function Chaos() {
               <div className="mt-3">
                 <Button
                   className="h-9 w-full rounded-[3px] bg-signal-red px-4 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-signal-red/90"
-                  onClick={() => dispatch({ type: "TRIGGER_CHAOS", kind: "full" })}
+                  onClick={() => actions.triggerChaos("full")}
                 >
                   <Zap className="size-4" />
                   Run full disruption scenario
@@ -216,7 +216,7 @@ export default function Chaos() {
                 </div>
                 <Button
                   className="mt-3 h-8 w-full rounded-[3px] bg-signal-green px-4 text-[11px] font-bold uppercase tracking-wider text-[#04120c] hover:bg-signal-green/90"
-                  onClick={() => dispatch({ type: "APPLY_RECOVERY" })}
+                  onClick={() => actions.applyRecovery()}
                 >
                   Apply recovery plan
                 </Button>
@@ -247,7 +247,7 @@ export default function Chaos() {
               size="sm"
               variant="outline"
               className="h-7 rounded-[3px] text-[11px]"
-              onClick={() => dispatch({ type: "RESET" })}
+              onClick={() => actions.reset()}
             >
               Reset demo
             </Button>

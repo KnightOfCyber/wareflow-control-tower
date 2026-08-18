@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink } from "react-router";
 import {
   AlertTriangle,
@@ -27,7 +28,8 @@ const NAV = [
 ];
 
 export function Sidebar() {
-  const { state, dispatch } = useWarehouse();
+  const { state, actions } = useWarehouse();
+  const [confirming, setConfirming] = useState(false);
 
   const openDecisions = state.decisions.filter((d) => d.status === "open").length;
   const openExceptions = state.exceptions.filter((e) => e.status === "open").length;
@@ -110,18 +112,41 @@ export function Sidebar() {
       </nav>
 
       <div className="shrink-0 border-t border-sidebar-border p-2.5">
-        <button
-          type="button"
-          onClick={() => {
-            if (window.confirm("Reset the demo to the seeded warehouse snapshot?")) {
-              dispatch({ type: "RESET" });
-            }
-          }}
-          className="flex w-full items-center justify-center gap-2 rounded-[3px] border border-border bg-muted/30 px-2 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
-          <RotateCcw className="size-3" />
-          Reset demo
-        </button>
+        {confirming ? (
+          <div className="space-y-1.5">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Restore seeded snapshot?
+            </p>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  actions.reset();
+                  setConfirming(false);
+                }}
+                className="flex-1 rounded-[3px] border border-signal-red/40 bg-signal-red/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-signal-red transition-colors hover:bg-signal-red/20"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirming(false)}
+                className="flex-1 rounded-[3px] border border-border bg-muted/30 px-2 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirming(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-[3px] border border-border bg-muted/30 px-2 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <RotateCcw className="size-3" />
+            Reset demo
+          </button>
+        )}
       </div>
     </aside>
   );

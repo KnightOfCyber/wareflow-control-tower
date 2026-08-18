@@ -18,7 +18,7 @@ const TYPE_LABEL: Record<ExceptionType, string> = {
 };
 
 export default function Exceptions() {
-  const { state, dispatch } = useWarehouse();
+  const { state, actions } = useWarehouse();
   const open = state.exceptions.filter((e) => e.status === "open");
   const resolved = state.exceptions
     .filter((e) => e.status === "resolved")
@@ -126,7 +126,7 @@ export default function Exceptions() {
                                     ? "bg-signal-cyan text-primary-foreground hover:bg-signal-cyan/90"
                                     : "border border-border bg-muted/50 text-muted-foreground hover:bg-accent hover:text-foreground",
                                 )}
-                                onClick={() => dispatch({ type: "RESOLVE_EXCEPTION", exceptionId: ex.id, optionId: o.id })}
+                                onClick={() => actions.resolveException(ex.id, o.id)}
                               >
                                 Execute
                               </Button>

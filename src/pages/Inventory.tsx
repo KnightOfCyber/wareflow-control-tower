@@ -17,7 +17,7 @@ const STATUS_FILTERS: Array<{ key: StockStatus | "all"; label: string }> = [
 ];
 
 export default function Inventory() {
-  const { state, dispatch } = useWarehouse();
+  const { state, actions } = useWarehouse();
   const [status, setStatus] = useState<StockStatus | "all">("all");
   const [zone, setZone] = useState<ZoneId | "all">("all");
   const [query, setQuery] = useState("");
@@ -136,7 +136,7 @@ export default function Inventory() {
                     <Button
                       size="sm"
                       className="h-6 rounded-[3px] bg-signal-cyan px-2 text-[10px] font-semibold uppercase tracking-wider text-primary-foreground hover:bg-signal-cyan/90"
-                      onClick={() => dispatch({ type: "CONFIRM_REPLENISHMENT", sku: p.sku })}
+                      onClick={() => actions.confirmReplenishment(p.sku)}
                     >
                       Confirm receipt
                     </Button>

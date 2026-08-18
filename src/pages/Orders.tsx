@@ -8,6 +8,8 @@ import { PageHeader, Panel, MicroLabel, MiniBar, EmptyState } from "@/components
 import { OrderStatusBadge, PriorityBadge, RiskBadge, GenericTag } from "@/components/shared/badges";
 import { fmtClock, fmtSla } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { getAllocationConflict } from "@/lib/decision-engine/allocation-engine";
+import { OrderActions } from "@/components/shared/OrderActions";
 import type { OrderStatus } from "@/types";
 
 const STATUS_FILTERS: Array<{ key: OrderStatus | "all"; label: string }> = [
@@ -199,6 +201,12 @@ function OrderDetail({ orderId }: { orderId: string }) {
   const order = state.orders.find((o) => o.id === orderId);
   if (!order) return null;
 
+  const shortfallLine = order.items.find((i) => {
+    const p = state.products.find((x) => x.sku === i.sku);
+    return p && i.qty - i.allocated > 0 && p.available < i.qty - i.allocated;
+  });
+  const shortfallConflict = shortfallLine ? getAllocationConflict(state, order.id, shortfallLine.sku) : null;
+
   const priority = computePriority(order, state);
   const risk = computeOrderRisk(order, state);
   const exception = order.exceptionId ? state.exceptions.find((e) => e.id === order.exceptionId) : undefined;
@@ -252,6 +260,10 @@ function OrderDetail({ orderId }: { orderId: string }) {
       </div>
 
       <div className="space-y-3">
+        <div className="rounded-[3px] border border-border/70 bg-muted/30 p-2.5">
+          <MicroLabel className="mb-2 block">OPERATOR ACTIONS — LIVE</MicroLabel>
+          <OrderActions orderId={order.id} conflict={shortfallConflict} />
+        </div>
         <div>
           <MicroLabel className="mb-1 block">PRIORITY ENGINE — SCORE {priority.score}/100</MicroLabel>
           <ul className="space-y-1">

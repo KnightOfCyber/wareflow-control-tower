@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { fmtSla } from "@/lib/format";
 import { remainingSla } from "@/lib/decision-engine/priority-engine";
+import { QcControls } from "@/components/shared/QcControls";
 
 export default function Fulfillment() {
-  const { state, dispatch } = useWarehouse();
+  const { state, actions } = useWarehouse();
 
   const pickingQueue = useMemo(
     () =>
@@ -92,16 +93,13 @@ export default function Fulfillment() {
                           </span>
                           {stuck && <GenericTag tone="red">UNAVAILABLE</GenericTag>}
                         </div>
-                      ) : (
-                        <select
-                          className="h-6 w-20 rounded-[3px] border border-input bg-muted/40 px-1 text-[11px] text-foreground focus:border-signal-cyan focus:outline-none"
-                          defaultValue=""
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              dispatch({ type: "START_PICKING", orderId: o.id, pickerId: e.target.value });
-                            }
-                          }}
-                        >
+                      ) : (                          <select
+                            className="h-6 w-20 rounded-[3px] border border-input bg-muted/40 px-1 text-[11px] text-foreground focus:border-signal-cyan focus:outline-none"
+                            defaultValue=""
+                            onChange={(e) => {
+                              if (e.target.value) actions.startPicking(o.id, e.target.value);
+                            }}
+                          >
                           <option value="" disabled>
                             picker…
                           </option>
@@ -122,7 +120,7 @@ export default function Fulfillment() {
                           className="h-6 w-full rounded-[3px] bg-signal-cyan px-2 text-[10px] font-semibold uppercase tracking-wider text-primary-foreground hover:bg-signal-cyan/90"
                           onClick={() => {
                             const p = availablePickers.find((x) => x.zone === o.zone) ?? availablePickers[0];
-                            if (p) dispatch({ type: "START_PICKING", orderId: o.id, pickerId: p.id });
+                            if (p) actions.startPicking(o.id, p.id);
                           }}
                           disabled={availablePickers.length === 0}
                         >
@@ -133,7 +131,7 @@ export default function Fulfillment() {
                           size="sm"
                           variant="outline"
                           className="h-6 w-full rounded-[3px] px-2 text-[10px] font-semibold uppercase tracking-wider"
-                          onClick={() => dispatch({ type: "COMPLETE_PICKING", orderId: o.id })}
+                          onClick={() => actions.completePicking(o.id)}
                         >
                           Complete pick
                         </Button>
@@ -184,7 +182,7 @@ export default function Fulfillment() {
                         <select
                           className="h-6 w-24 rounded-[3px] border border-input bg-muted/40 px-1 text-[11px] text-foreground focus:border-signal-cyan focus:outline-none"
                           value={o.stationId ?? ""}
-                          onChange={(e) => dispatch({ type: "START_PACKING", orderId: o.id, stationId: e.target.value })}
+                          onChange={(e) => actions.startPacking(o.id, e.target.value)}
                         >
                           {state.stations.map((s) => (
                             <option key={s.id} value={s.id}>
@@ -199,7 +197,7 @@ export default function Fulfillment() {
                           size="sm"
                           variant="outline"
                           className="h-6 w-full rounded-[3px] px-2 text-[10px] font-semibold uppercase tracking-wider"
-                          onClick={() => dispatch({ type: "COMPLETE_PACKING", orderId: o.id })}
+                          onClick={() => actions.completePacking(o.id)}
                         >
                           Packed → QC
                         </Button>
@@ -253,28 +251,7 @@ export default function Fulfillment() {
                       </td>
                       <td className="wf-mono">{o.items.reduce((a, i) => a + i.qty, 0)} u</td>
                       <td>
-                        <div className="flex gap-1.5">
-                          <Button
-                            size="sm"
-                            className="h-6 flex-1 rounded-[3px] bg-signal-green px-2 text-[10px] font-semibold uppercase tracking-wider text-[#04120c] hover:bg-signal-green/90"
-                            onClick={() => dispatch({ type: "QC_PASS", orderId: o.id })}
-                          >
-                            Pass
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-6 flex-1 rounded-[3px] border-signal-red/40 bg-signal-red/10 px-2 text-[10px] font-semibold uppercase tracking-wider text-signal-red hover:bg-signal-red/20"
-                            onClick={() => {
-                              const reason =
-                                window.prompt("QC failure reason:", "Label misprint") ??
-                                "QC inspection failed";
-                              dispatch({ type: "QC_FAIL", orderId: o.id, reason });
-                            }}
-                          >
-                            Fail
-                          </Button>
-                        </div>
+                        <QcControls orderId={o.id} actions={actions} />
                       </td>
                     </tr>
                   ))}
@@ -315,9 +292,7 @@ export default function Fulfillment() {
                         <select
                           className="h-6 w-28 rounded-[3px] border border-input bg-muted/40 px-1 text-[11px] text-foreground focus:border-signal-cyan focus:outline-none"
                           value={o.vehicleId ?? ""}
-                          onChange={(e) =>
-                            dispatch({ type: "DISPATCH", orderId: o.id, vehicleId: e.target.value })
-                          }
+                          onChange={(e) => actions.dispatch(o.id, e.target.value)}
                         >
                           <option value="" disabled>
                             truck…
@@ -337,7 +312,7 @@ export default function Fulfillment() {
                           className="h-6 w-full rounded-[3px] bg-signal-green px-2 text-[10px] font-semibold uppercase tracking-wider text-[#04120c] hover:bg-signal-green/90"
                           onClick={() => {
                             const v = state.vehicles.find((x) => x.status !== "delayed" && x.status !== "enroute");
-                            if (v) dispatch({ type: "DISPATCH", orderId: o.id, vehicleId: v.id });
+                            if (v) actions.dispatch(o.id, v.id);
                           }}
                           disabled={!state.vehicles.some((v) => v.status !== "delayed" && v.status !== "enroute")}
                         >
@@ -406,6 +381,16 @@ export default function Fulfillment() {
                   </span>
                 </div>
                 <MiniBar value={p.workload * 20} tone={p.status === "unavailable" ? "red" : "cyan"} className="mt-1" />
+                {p.status === "unavailable" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-1.5 h-5 w-full rounded-[2px] border-signal-amber/40 px-1 text-[9px] font-semibold uppercase tracking-wider text-signal-amber hover:bg-signal-amber/15"
+                    onClick={() => actions.markPickerAvailable(p.id)}
+                  >
+                    Mark available
+                  </Button>
+                )}
               </div>
             ))}
           </div>

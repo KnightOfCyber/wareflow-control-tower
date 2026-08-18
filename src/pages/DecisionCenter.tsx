@@ -8,7 +8,7 @@ import { GenericTag } from "@/components/shared/badges";
 import { fmtClock } from "@/lib/format";
 
 export default function DecisionCenter() {
-  const { state, dispatch } = useWarehouse();
+  const { state, actions } = useWarehouse();
 
   const open = state.decisions.filter((d) => d.status === "open");
   const history = state.decisions.filter((d) => d.status !== "open");
@@ -53,11 +53,11 @@ export default function DecisionCenter() {
               key={d.id}
               decision={d}
               conflict={conflicts.get(d.id) ?? null}
-              onApply={(optionId) => dispatch({ type: "APPLY_DECISION", decisionId: d.id, optionId })}
-              onDismiss={() => dispatch({ type: "DISMISS_DECISION", decisionId: d.id })}
+              onApply={(optionId) => actions.applyDecision(d.id, optionId)}
+              onDismiss={() => actions.dismissDecision(d.id)}
               onSimulate={() => {
                 if (d.orderId && d.sku) {
-                  dispatch({ type: "START_SIM", orderId: d.orderId, sku: d.sku });
+                  actions.startSim(d.orderId, d.sku);
                 }
               }}
             />

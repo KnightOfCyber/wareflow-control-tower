@@ -149,6 +149,8 @@ export interface ExceptionRecord {
   status: ExceptionStatus;
   createdAt: number;
   resolvedAt?: number;
+  /** before → after report captured when this exception was resolved */
+  resolvedChanges?: ChangeItem[];
   analysis: string[];
   options: ExceptionOption[];
   recommendedOptionId: string;
@@ -174,6 +176,13 @@ export interface AllocationEntry {
 }
 
 /** One allocation option produced by the allocation engine */
+export interface ScenarioBreakdown {
+  sla: number;
+  fulfillment: number;
+  delay: number;
+  movement: number;
+}
+
 export interface AllocationOption {
   id: string;
   label: string;
@@ -188,8 +197,18 @@ export interface AllocationOption {
   ordersAffected: string[];
   movement: number;
   riskScore: number;
+  /** weighted components that produced riskScore (sla 40% · fulfillment 30% · delay 20% · movement 10%) */
+  breakdown: ScenarioBreakdown;
   pros: string[];
   cons: string[];
+}
+
+/** One before → after change, shown after a decision/action is applied. */
+export interface ChangeItem {
+  label: string;
+  before: string;
+  after: string;
+  tone?: "green" | "amber" | "red" | "cyan" | "steel";
 }
 
 export interface AllocationConflict {
@@ -219,6 +238,10 @@ export interface DecisionRecord {
   impact: string[];
   status: DecisionStatus;
   createdAt: number;
+  /** when the operator applied the decision */
+  appliedAt?: number;
+  /** before → after report captured at application time */
+  changes?: ChangeItem[];
   orderId?: string;
   sku?: string;
   conflictId?: string;
@@ -302,6 +325,9 @@ export interface SimSession {
   recommendedScenarioId: string;
   comparedAt: number;
   appliedScenarioId?: string;
+  /** before → after report captured when a scenario was applied */
+  appliedChanges?: ChangeItem[];
+  appliedAt?: number;
   explanation: string[];
 }
 

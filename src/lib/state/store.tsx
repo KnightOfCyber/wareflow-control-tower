@@ -6,6 +6,7 @@ import React, {
   useReducer,
   useRef,
 } from "react";
+import { toast } from "sonner";
 import type {
   DecisionRecord,
   DisruptionKind,
@@ -18,6 +19,11 @@ import {
 } from "@/lib/decision-engine/allocation-engine";
 import { applyRecoveryStep, buildRecoveryPlan } from "@/lib/decision-engine/recovery-engine";
 import { refreshDerived } from "./derived";
+import {
+  buildAllocationChanges,
+  buildRecoveryChanges,
+  buildResolutionChanges,
+} from "./changes";
 import { applyAllocationsToState } from "@/lib/workflow/allocations";
 import {
   completePacking,
@@ -51,6 +57,8 @@ export type WarehouseAction =
   | { type: "START_SIM"; orderId: string; sku: string }
   | { type: "CLEAR_SIM" }
   | { type: "CONFIRM_REPLENISHMENT"; sku: string }
+  | { type: "REQUEUE_ORDER"; orderId: string }
+  | { type: "MARK_PICKER_AVAILABLE"; pickerId: string }
   | { type: "RESET" };
 
 function clone(state: WarehouseState): WarehouseState {
@@ -136,10 +144,16 @@ export function reducer(state: WarehouseState, action: WarehouseAction): Warehou
         );
         if (decision) {
           decision.status = "applied";
+          decision.appliedAt = draft.clock;
+          decision.changes = buildAllocationChanges(state, draft, conflict, option);
           pushEvent(draft, "decision", `Decision ${decision.id} applied by operator`);
         }
       } else {
-        if (draft.sim) draft.sim.appliedScenarioId = option.id;
+        if (draft.sim) {
+          draft.sim.appliedScenarioId = option.id;
+          draft.sim.appliedAt = draft.clock;
+          draft.sim.appliedChanges = buildAllocationChanges(state, draft, conflict, option);
+        }
         pushEvent(draft, "decision", `Simulator scenario applied — operator approved Scenario ${option.id}`);
       }
 
@@ -171,6 +185,8 @@ export function reducer(state: WarehouseState, action: WarehouseAction): Warehou
           pushEvent(draft, "success", `Order #${a.orderId} allocated ${a.qty} × ${a.sku} — ${o?.status.toUpperCase()}`);
         }
         decision.status = "applied";
+        decision.appliedAt = draft.clock;
+        decision.changes = buildAllocationChanges(state, draft, conflict, option);
         pushEvent(draft, "decision", `${decision.id} applied — ${decision.recommendation}`);
       } else if (decision.type === "recovery" && decision.planId) {
         const plan = draft.chaos.recoveryPlan;
@@ -182,6 +198,8 @@ export function reducer(state: WarehouseState, action: WarehouseAction): Warehou
           draft.chaos = { ...draft.chaos, disruptions: [], recoveryPlan: undefined, appliedAt: draft.clock };
           const improvement = plan.predictedImprovement[0];
           pushEvent(draft, "decision", `RECOVERY PLAN APPLIED${improvement ? ` — ${improvement}` : ""}`);
+          decision.appliedAt = draft.clock;
+          decision.changes = buildRecoveryChanges(state);
         }
         decision.status = "applied";
       } else {
@@ -300,6 +318,7 @@ export function reducer(state: WarehouseState, action: WarehouseAction): Warehou
       ex.status = "resolved";
       ex.resolvedAt = draft.clock;
       ex.resolution = `${option.label} — ${option.summary}`;
+      ex.resolvedChanges = buildResolutionChanges(state, draft, ex.id);
       pushEvent(draft, "success", `Exception ${ex.id} RESOLVED: ${option.label}${order ? ` (order #${order.id})` : ""}`);
       pushEvent(draft, "info", `Order #${order?.id} ${order ? order.status.toUpperCase() : ""} after exception resolution`);
 
@@ -380,6 +399,26 @@ export function reducer(state: WarehouseState, action: WarehouseAction): Warehou
       return draft;
     }
 
+    case "REQUEUE_ORDER": {
+      const draft = clone(state);
+      const order = draft.orders.find((o) => o.id === action.orderId);
+      if (!order || order.status !== "delayed") return state;
+      order.status = "prioritized";
+      order.pickerId = undefined;
+      pushEvent(draft, "info", `Order #${order.id} requeued — back in the allocation pipeline`);
+      refreshDerived(draft);
+      return draft;
+    }
+
+    case "MARK_PICKER_AVAILABLE": {
+      const draft = clone(state);
+      const picker = draft.pickers.find((p) => p.id === action.pickerId);
+      if (!picker || picker.status !== "unavailable") return state;
+      picker.status = "available";
+      pushEvent(draft, "info", `Picker ${picker.id} marked available by operator`);
+      return draft;
+    }
+
     case "RESET": {
       const fresh = buildSeedState();
       try {
@@ -395,9 +434,165 @@ export function reducer(state: WarehouseState, action: WarehouseAction): Warehou
   }
 }
 
+export interface WarehouseActions {
+  applyDecision: (decisionId: string, optionId?: string) => boolean;
+  applyAllocation: (orderId: string, sku: string, optionId: string, source: "decision" | "simulator") => boolean;
+  dismissDecision: (decisionId: string) => boolean;
+  startPicking: (orderId: string, pickerId: string) => boolean;
+  completePicking: (orderId: string) => boolean;
+  startPacking: (orderId: string, stationId: string) => boolean;
+  completePacking: (orderId: string) => boolean;
+  qcPass: (orderId: string) => boolean;
+  qcFail: (orderId: string, reason: string) => boolean;
+  dispatch: (orderId: string, vehicleId: string) => boolean;
+  resolveException: (exceptionId: string, optionId: string) => boolean;
+  triggerChaos: (kind: DisruptionKind | "full") => boolean;
+  applyRecovery: () => boolean;
+  startSim: (orderId: string, sku: string) => boolean;
+  clearSim: () => boolean;
+  confirmReplenishment: (sku: string) => boolean;
+  requeueOrder: (orderId: string) => boolean;
+  markPickerAvailable: (pickerId: string) => boolean;
+  reset: () => void;
+}
+
+/**
+ * Pure, toast-wired action helpers. Each helper runs the reducer on the
+ * current state first to predict success: valid actions fire a toast and
+ * dispatch; invalid ones explain why nothing changed.
+ */
+function makeActions(
+  state: WarehouseState,
+  dispatch: React.Dispatch<WarehouseAction>,
+): WarehouseActions {
+  function run(
+    action: WarehouseAction,
+    successTitle: string,
+    successDesc?: string,
+    errorTitle = "Action not possible",
+  ): boolean {
+    const next = reducer(state, action);
+    if (next === state) {
+      toast.error(errorTitle, { description: "The current warehouse state does not allow this action." });
+      return false;
+    }
+    toast.success(successTitle, successDesc ? { description: successDesc } : undefined);
+    dispatch(action);
+    return true;
+  }
+
+  return {
+    applyDecision: (decisionId, optionId) => {
+      const d = state.decisions.find((x) => x.id === decisionId);
+      return run(
+        { type: "APPLY_DECISION", decisionId, optionId },
+        `Decision ${decisionId} applied`,
+        d?.impact[0],
+        "Decision unavailable",
+      );
+    },
+    applyAllocation: (orderId, sku, optionId, source) => {
+      const conflict = getAllocationConflict(state, orderId, sku);
+      const opt = conflict?.options.find((o) => o.id === optionId);
+      return run(
+        { type: "APPLY_ALLOCATION", orderId, sku, optionId, source },
+        `Scenario ${optionId} applied`,
+        opt ? `${opt.fulfillmentAfter}% fulfillment · composite risk ${opt.riskScore}` : undefined,
+        "Scenario unavailable",
+      );
+    },
+    dismissDecision: (decisionId) =>
+      run({ type: "DISMISS_DECISION", decisionId }, `Decision ${decisionId} dismissed`),
+    startPicking: (orderId, pickerId) => {
+      const p = state.pickers.find((x) => x.id === pickerId);
+      return run(
+        { type: "START_PICKING", orderId, pickerId },
+        `Order #${orderId} picking started`,
+        p ? `picker ${p.id} · ${p.zone}` : undefined,
+        "Pick not possible",
+      );
+    },
+    completePicking: (orderId) =>
+      run({ type: "COMPLETE_PICKING", orderId }, `Order #${orderId} pick complete`, "moving to packing line"),
+    startPacking: (orderId, stationId) =>
+      run({ type: "START_PACKING", orderId, stationId }, `Order #${orderId} packing on ${stationId}`),
+    completePacking: (orderId) =>
+      run({ type: "COMPLETE_PACKING", orderId }, `Order #${orderId} packed`, "queued for quality check"),
+    qcPass: (orderId) =>
+      run({ type: "QC_PASS", orderId }, `Order #${orderId} QC PASSED`, "ready for dispatch"),
+    qcFail: (orderId, reason) =>
+      run(
+        { type: "QC_FAIL", orderId, reason },
+        `Order #${orderId} QC FAILED`,
+        `exception created — ${reason}`,
+        "QC failure not possible",
+      ),
+    dispatch: (orderId, vehicleId) => {
+      const v = state.vehicles.find((x) => x.id === vehicleId);
+      return run(
+        { type: "DISPATCH", orderId, vehicleId },
+        `Order #${orderId} dispatched`,
+        v ? `${v.name} · ${v.route}` : undefined,
+        "Dispatch not possible",
+      );
+    },
+    resolveException: (exceptionId, optionId) => {
+      const ex = state.exceptions.find((e) => e.id === exceptionId);
+      const opt = ex?.options.find((o) => o.id === optionId) ?? ex?.options.find((o) => o.id === ex.recommendedOptionId);
+      return run(
+        { type: "RESOLVE_EXCEPTION", exceptionId, optionId },
+        `Exception ${exceptionId} resolved`,
+        opt?.label,
+        "Resolution not possible",
+      );
+    },
+    triggerChaos: (kind) =>
+      run(
+        { type: "TRIGGER_CHAOS", kind },
+        kind === "full" ? "Full disruption scenario injected" : "Disruption injected",
+        "recovery plan generated — review before applying",
+      ),
+    applyRecovery: () => {
+      const plan = state.chaos.recoveryPlan;
+      return run(
+        { type: "APPLY_RECOVERY" },
+        "Recovery plan applied",
+        plan?.predictedImprovement[0],
+        "No recovery plan available",
+      );
+    },
+    startSim: (orderId, sku) =>
+      run({ type: "START_SIM", orderId, sku }, "Simulation opened", "nothing changed — compare scenarios first"),
+    clearSim: () => run({ type: "CLEAR_SIM" }, "Simulation closed"),
+    confirmReplenishment: (sku) => {
+      const p = state.products.find((x) => x.sku === sku);
+      return run(
+        { type: "CONFIRM_REPLENISHMENT", sku },
+        `Replenishment received`,
+        p && p.replenishQty ? `+${p.replenishQty} × ${p.sku}` : undefined,
+        "No open PO for this SKU",
+      );
+    },
+    requeueOrder: (orderId) =>
+      run({ type: "REQUEUE_ORDER", orderId }, `Order #${orderId} requeued`, "back in the allocation pipeline", "Requeue not possible"),
+    markPickerAvailable: (pickerId) =>
+      run({ type: "MARK_PICKER_AVAILABLE", pickerId }, `Picker ${pickerId} available`),
+    reset: () => {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // ignore
+      }
+      dispatch({ type: "RESET" });
+      toast.success("Demo reset", { description: "Seeded warehouse snapshot restored." });
+    },
+  };
+}
+
 interface StoreApi {
   state: WarehouseState;
   dispatch: React.Dispatch<WarehouseAction>;
+  actions: WarehouseActions;
 }
 
 const WarehouseContext = createContext<StoreApi | null>(null);
@@ -422,7 +617,10 @@ export function WarehouseProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(timer);
   }, []);
 
-  const api = useMemo(() => ({ state, dispatch }), [state]);
+  const api = useMemo(
+    () => ({ state, dispatch, actions: makeActions(state, dispatch) }),
+    [state],
+  );
 
   return <WarehouseContext.Provider value={api}>{children}</WarehouseContext.Provider>;
 }

@@ -5,10 +5,11 @@ import { getAllocationConflict } from "@/lib/decision-engine/allocation-engine";
 import { detectBottlenecks, zoneActivity } from "@/lib/decision-engine/bottleneck-engine";
 import { computeOrderRisk } from "@/lib/decision-engine/risk-engine";
 import { Panel, Kpi, MicroLabel, MiniBar, Dot } from "@/components/shared/ui";
-import { DecisionCard } from "@/components/shared/DecisionCard";
+import { ChangeRows, DecisionCard } from "@/components/shared/DecisionCard";
 import { ActivityFeed } from "@/components/shared/ActivityFeed";
 import { GenericTag, RiskBadge } from "@/components/shared/badges";
 import { Button } from "@/components/ui/button";
+import { fmtClock } from "@/lib/format";
 import { ArrowRight, FlaskConical, ShieldAlert } from "lucide-react";
 
 const STAGES = [
@@ -22,12 +23,18 @@ const STAGES = [
 ] as const;
 
 export default function ControlTower() {
-  const { state, dispatch } = useWarehouse();
+  const { state, actions } = useWarehouse();
 
   const openDecision = state.decisions.find((d) => d.status === "open" && d.type === "allocation");
   const conflict = openDecision
     ? getAllocationConflict(state, openDecision.orderId ?? "", openDecision.sku ?? "")
     : null;
+
+  // Most recent applied decision — shown briefly with its before/after diff.
+  const lastApplied = state.decisions
+    .filter((d) => d.status === "applied" && d.appliedAt !== undefined)
+    .sort((a, b) => (b.appliedAt ?? 0) - (a.appliedAt ?? 0))[0];
+  const showLastApplied = lastApplied && state.clock - (lastApplied.appliedAt ?? 0) < 10;
 
   const data = useMemo(() => {
     const open = state.orders.filter((o) => o.status !== "dispatched");
@@ -83,17 +90,41 @@ export default function ControlTower() {
             decision={openDecision}
             conflict={conflict}
             onApply={(optionId) =>
-              dispatch({
-                type: "APPLY_ALLOCATION",
-                orderId: conflict.orderId,
-                sku: conflict.sku,
-                optionId: optionId ?? conflict.recommendedOptionId,
-                source: "decision",
-              })
+              actions.applyAllocation(
+                conflict.orderId,
+                conflict.sku,
+                optionId ?? conflict.recommendedOptionId,
+                "decision",
+              )
             }
-            onDismiss={() => dispatch({ type: "DISMISS_DECISION", decisionId: openDecision.id })}
-            onSimulate={() => dispatch({ type: "START_SIM", orderId: conflict.orderId, sku: conflict.sku })}
+            onDismiss={() => actions.dismissDecision(openDecision.id)}
+            onSimulate={() => actions.startSim(conflict.orderId, conflict.sku)}
           />
+        </div>
+      )}
+
+      {/* ---------- Last applied decision (before/after) ---------- */}
+      {showLastApplied && lastApplied && (
+        <div className="wf-accent-top rounded-md border border-signal-green/40 bg-signal-green/[0.05] px-3.5 py-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="wf-mono text-[10px] uppercase tracking-[0.2em] text-signal-green">
+                DECISION APPLIED
+              </span>
+              <span className="text-xs font-medium text-foreground">{lastApplied.title}</span>
+              <span className="wf-mono text-[10px] text-muted-foreground">
+                {fmtClock(lastApplied.appliedAt ?? 0)}
+              </span>
+            </div>
+            <Link to="/decisions" className="text-[10px] font-semibold uppercase tracking-wider text-signal-cyan hover:underline">
+              Decision log →
+            </Link>
+          </div>
+          {lastApplied.changes && lastApplied.changes.length > 0 && (
+            <div className="mt-2 rounded-[3px] border border-signal-green/20 bg-muted/20 px-3 py-2">
+              <ChangeRows changes={lastApplied.changes} />
+            </div>
+          )}
         </div>
       )}
 

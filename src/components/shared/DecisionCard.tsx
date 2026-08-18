@@ -1,6 +1,7 @@
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { AllocationConflict, DecisionRecord } from "@/types";
+import type { AllocationConflict, ChangeItem, DecisionRecord } from "@/types";
 import { fmtClock } from "@/lib/format";
 import { GenericTag, RiskBadge } from "./badges";
 import { MicroLabel } from "./ui";
@@ -143,6 +144,18 @@ export function DecisionCard({
         </div>
       </div>
 
+      {decision.status === "applied" && decision.changes && decision.changes.length > 0 && (
+        <div className="border-t border-border/70 bg-muted/20 px-3.5 py-2.5">
+          <div className="mb-1.5 flex items-center justify-between">
+            <MicroLabel className="text-signal-green">WHAT CHANGED — BEFORE → AFTER</MicroLabel>
+            <span className="wf-mono text-[10px] text-muted-foreground">
+              applied {decision.appliedAt !== undefined ? fmtClock(decision.appliedAt) : ""}
+            </span>
+          </div>
+          <ChangeRows changes={decision.changes} />
+        </div>
+      )}
+
       {decision.status === "open" && (
         <div className="flex flex-wrap items-center gap-2 border-t border-border/70 px-3.5 py-2.5">
           {onApply && (
@@ -172,5 +185,32 @@ export function DecisionCard({
         </div>
       )}
     </article>
+  );
+}
+
+const CHANGE_TONE: Record<string, string> = {
+  green: "text-signal-green",
+  amber: "text-signal-amber",
+  red: "text-signal-red",
+  cyan: "text-signal-cyan",
+  steel: "text-muted-foreground",
+};
+
+export function ChangeRows({ changes, className }: { changes: ChangeItem[]; className?: string }) {
+  return (
+    <div className={cn("divide-y divide-border/40", className)}>
+      {changes.map((c, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 py-1">
+          <span className="w-44 shrink-0 truncate text-[11px] text-muted-foreground">{c.label}</span>
+          <span className="wf-mono text-[11px] text-muted-foreground/70 line-through decoration-muted-foreground/40">
+            {c.before}
+          </span>
+          <ArrowRight className="size-3 shrink-0 text-muted-foreground" />
+          <span className={cn("wf-mono text-[11px] font-medium", CHANGE_TONE[c.tone ?? "cyan"] ?? "text-foreground")}>
+            {c.after}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }

@@ -109,12 +109,11 @@ function buildOption(
   // Delay metric is the PRIMARY order's wait; competitor delays surface in
   // the orders-affected column and the impact notes.
   const maxDelay = primaryDelay;
-  const riskScore = Math.round(
-    riskScoreOf(slaRisk) * 0.4 +
-      (100 - fulfillmentAfter) * 0.3 +
-      Math.min(100, (maxDelay / 120) * 100) * 0.2 +
-      Math.min(100, movement * 4) * 0.1,
-  );
+  const slaComp = riskScoreOf(slaRisk) * 0.4;
+  const fulfillmentComp = (100 - fulfillmentAfter) * 0.3;
+  const delayComp = Math.min(100, (maxDelay / 120) * 100) * 0.2;
+  const movementComp = Math.min(100, movement * 4) * 0.1;
+  const riskScore = Math.round(slaComp + fulfillmentComp + delayComp + movementComp);
 
   return {
     id,
@@ -129,6 +128,12 @@ function buildOption(
     ordersAffected: [...affected],
     movement,
     riskScore,
+    breakdown: {
+      sla: Math.round(slaComp),
+      fulfillment: Math.round(fulfillmentComp),
+      delay: Math.round(delayComp),
+      movement: Math.round(movementComp),
+    },
     pros: [],
     cons: [],
   };

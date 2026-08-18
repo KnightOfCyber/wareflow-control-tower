@@ -96,7 +96,7 @@ createRoot(document.getElementById("root")!).render(
         <RouteSyncer />
         <App />
       </BrowserRouter>
-      <Toaster />
+      <Toaster theme="dark" />
     </RootErrorBoundary>
   </StrictMode>,
 );

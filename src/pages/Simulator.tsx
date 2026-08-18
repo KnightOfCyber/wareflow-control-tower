@@ -8,9 +8,10 @@ import { GenericTag, RiskBadge } from "@/components/shared/badges";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { fmtShort } from "@/lib/format";
+import { ChangeRows } from "@/components/shared/DecisionCard";
 
 export default function Simulator() {
-  const { state, dispatch } = useWarehouse();
+  const { state, actions } = useWarehouse();
   const sim = state.sim;
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -39,7 +40,7 @@ export default function Simulator() {
                     <li key={c.id}>
                       <button
                         type="button"
-                        onClick={() => dispatch({ type: "START_SIM", orderId: c.orderId, sku: c.sku })}
+                        onClick={() => actions.startSim(c.orderId, c.sku)}
                         className="group w-full rounded-[3px] border border-border/70 bg-muted/30 p-3 text-left transition-colors hover:border-signal-amber/50 hover:bg-signal-amber/[0.07]"
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -105,31 +106,39 @@ export default function Simulator() {
         title={sim.title}
         meta={`Conflict ${sim.conflictId} · compared at ${fmtShort(sim.comparedAt)} into the shift`}
         right={
-          <Button size="sm" variant="outline" className="h-7 rounded-[3px] text-[11px]" onClick={() => dispatch({ type: "CLEAR_SIM" })}>
+          <Button size="sm" variant="outline" className="h-7 rounded-[3px] text-[11px]" onClick={() => actions.clearSim()}>
             <X className="size-3.5" /> Close simulation
           </Button>
         }
       />
 
       {applied ? (
-        <div className="wf-ribbon mb-4 flex flex-wrap items-center gap-3 rounded-md border border-signal-green/40 bg-signal-green/[0.06] px-3.5 py-3">
-          <CheckCircle2 className="size-5 text-signal-green" />
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-semibold uppercase tracking-wider text-signal-green">
-              SCENARIO {applied.id} APPLIED — SIMULATION BECAME REALITY
-            </div>
-            <div className="mt-0.5 text-[11px] text-muted-foreground">
-              Inventory, orders, picking queue and the activity log were updated. Check the{" "}
-              <Link to="/" className="text-signal-cyan hover:underline">
-                Control Tower
-              </Link>{" "}
-              or the{" "}
-              <Link to="/fulfillment" className="text-signal-cyan hover:underline">
-                Fulfillment board
-              </Link>{" "}
-              to see the new state.
+        <div className="wf-ribbon mb-4 rounded-md border border-signal-green/40 bg-signal-green/[0.06] px-3.5 py-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <CheckCircle2 className="size-5 shrink-0 text-signal-green" />
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-semibold uppercase tracking-wider text-signal-green">
+                SCENARIO {applied.id} APPLIED — SIMULATION BECAME REALITY
+              </div>
+              <div className="mt-0.5 text-[11px] text-muted-foreground">
+                Inventory, orders, picking queue and the activity log were updated. Check the{" "}
+                <Link to="/" className="text-signal-cyan hover:underline">
+                  Control Tower
+                </Link>{" "}
+                or the{" "}
+                <Link to="/fulfillment" className="text-signal-cyan hover:underline">
+                  Fulfillment board
+                </Link>{" "}
+                to see the new state.
+              </div>
             </div>
           </div>
+          {sim.appliedChanges && sim.appliedChanges.length > 0 && (
+            <div className="mt-2.5 border-t border-signal-green/20 pt-2.5">
+              <MicroLabel className="mb-1.5 block text-signal-green">WHAT CHANGED — BEFORE → AFTER</MicroLabel>
+              <ChangeRows changes={sim.appliedChanges} />
+            </div>
+          )}
         </div>
       ) : (
         <div className="mb-4 flex items-center gap-2 rounded-[3px] border border-signal-cyan/40 bg-signal-cyan/[0.06] px-3.5 py-2 text-[11px] text-muted-foreground">
@@ -263,6 +272,43 @@ export default function Simulator() {
               <Metric label="SLA risk" value={selected.slaRisk.toUpperCase()} />
               <Metric label="Delay" value={fmtShort(selected.expectedDelayMin)} />
             </div>
+            <div className="mt-4">
+              <MicroLabel className="mb-1.5 block">HOW THE RISK SCORE IS COMPOSED</MicroLabel>
+              <div className="space-y-2">
+                <FactorBar
+                  label="SLA risk"
+                  weight="× 0.4"
+                  value={selected.breakdown.sla}
+                  tone="red"
+                  hint={`post-apply SLA risk: ${selected.slaRisk.toUpperCase()}`}
+                />
+                <FactorBar
+                  label="Fulfillment gap"
+                  weight="× 0.3"
+                  value={selected.breakdown.fulfillment}
+                  tone="amber"
+                  hint={`uncovered ${100 - selected.fulfillmentAfter}% of the order`}
+                />
+                <FactorBar
+                  label="Expected delay"
+                  weight="× 0.2"
+                  value={selected.breakdown.delay}
+                  tone="cyan"
+                  hint={fmtShort(selected.expectedDelayMin)}
+                />
+                <FactorBar
+                  label="Warehouse movement"
+                  weight="× 0.1"
+                  value={selected.breakdown.movement}
+                  tone="steel"
+                  hint={`${selected.movement} operations`}
+                />
+              </div>
+              <p className="mt-2 wf-mono text-[10px] text-muted-foreground">
+                risk = {selected.breakdown.sla} + {selected.breakdown.fulfillment} + {selected.breakdown.delay} +{" "}
+                {selected.breakdown.movement} = {selected.riskScore}
+              </p>
+            </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
                 <MicroLabel className="mb-1.5 block text-signal-green">ADVANTAGES</MicroLabel>
@@ -329,15 +375,7 @@ export default function Simulator() {
                 </p>
                 <Button
                   className="h-8 rounded-[3px] bg-signal-cyan px-4 text-[11px] font-semibold uppercase tracking-wider text-primary-foreground hover:bg-signal-cyan/90"
-                  onClick={() =>
-                    dispatch({
-                      type: "APPLY_ALLOCATION",
-                      orderId: sim.orderId,
-                      sku: sim.sku,
-                      optionId: selected.id,
-                      source: "simulator",
-                    })
-                  }
+                  onClick={() => actions.applyAllocation(sim.orderId, sim.sku, selected.id, "simulator")}
                 >
                   Apply decision — Scenario {selected.id}
                 </Button>
@@ -355,6 +393,31 @@ function Metric({ label, value }: { label: string; value: string }) {
     <div className="rounded-[3px] border border-border/70 bg-muted/30 px-2 py-1.5">
       <div className="wf-label">{label}</div>
       <div className="wf-mono mt-0.5 text-sm font-semibold text-foreground">{value}</div>
+    </div>
+  );
+}
+
+function FactorBar({
+  label,
+  weight,
+  value,
+  tone,
+  hint,
+}: {
+  label: string;
+  weight: string;
+  value: number;
+  tone: "red" | "amber" | "cyan" | "steel";
+  hint: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-36 shrink-0 text-[11px] text-muted-foreground">
+        {label} <span className="wf-mono text-[10px] text-muted-foreground/60">{weight}</span>
+      </span>
+      <MiniBar value={value} tone={tone === "steel" ? "steel" : tone} className="flex-1" />
+      <span className="wf-mono w-8 text-right text-[11px] text-foreground">{value}</span>
+      <span className="hidden w-40 truncate text-right text-[10px] text-muted-foreground sm:block">{hint}</span>
     </div>
   );
 }
