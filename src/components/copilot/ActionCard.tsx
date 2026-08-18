@@ -85,8 +85,9 @@ export function ActionCard({
         {!applied && (
           <button
             type="button"
+            aria-label="Cancel proposed action"
             onClick={() => onCancel(message.id)}
-            className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             title="Cancel action"
           >
             <X className="size-3" />
@@ -126,6 +127,7 @@ export function ActionCard({
               <Button
                 size="sm"
                 variant="outline"
+                aria-label={simulated ? "Re-open What-If simulator" : "Simulate proposed action"}
                 className="h-7 rounded-[3px] px-2.5 text-[10px] font-semibold uppercase tracking-wider"
                 onClick={simulate}
               >
@@ -136,6 +138,7 @@ export function ActionCard({
             {canApply && (
               <Button
                 size="sm"
+                aria-label="Apply decision to live warehouse state"
                 className="h-7 rounded-[3px] bg-signal-cyan px-2.5 text-[10px] font-semibold uppercase tracking-wider text-primary-foreground hover:bg-signal-cyan/90"
                 disabled={applying}
                 onClick={() => onConfirm(message.id)}

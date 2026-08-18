@@ -191,6 +191,7 @@ export function CopilotChat({ variant = "page" }: { variant?: "page" | "drawer" 
 
       {/* Input */}
       <form
+        aria-label="Copilot message form"
         className={cn("shrink-0 border-t border-border/70 p-2.5", variant === "page" && "pb-1")}
         onSubmit={(e) => {
           e.preventDefault();
@@ -198,25 +199,32 @@ export function CopilotChat({ variant = "page" }: { variant?: "page" | "drawer" 
         }}
       >
         <div className="flex items-center gap-2">
+          <label htmlFor="copilot-input" className="sr-only">
+            Ask Copilot about warehouse operations
+          </label>
           <input
+            id="copilot-input"
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            aria-label="Ask Copilot about warehouse operations"
             placeholder="Ask about risk, orders, SKUs, disruptions…"
-            className="h-9 min-w-0 flex-1 rounded-[3px] border border-input bg-muted/40 px-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-signal-cyan focus:outline-none"
+            className="h-9 min-w-0 flex-1 rounded-[3px] border border-input bg-muted/40 px-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-signal-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           />
           <button
             type="submit"
+            aria-label="Send Copilot message"
             disabled={!input.trim() || busy}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[3px] bg-signal-cyan text-primary-foreground transition-colors hover:bg-signal-cyan/90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[3px] bg-signal-cyan text-primary-foreground transition-colors hover:bg-signal-cyan/90 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             title="Send"
           >
             <Send className="size-4" />
           </button>
           <button
             type="button"
+            aria-label="Clear Copilot conversation"
             onClick={clear}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[3px] border border-border/70 bg-muted/30 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[3px] border border-border/70 bg-muted/30 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             title="Clear conversation"
           >
             <Eraser className="size-3.5" />

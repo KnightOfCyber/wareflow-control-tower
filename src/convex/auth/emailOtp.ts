@@ -17,6 +17,10 @@ export const emailOtp = Email({
   },
   async sendVerificationRequest({ identifier: email, token }) {
     try {
+      const apiKey = process.env.VLY_EMAIL_API_KEY;
+      if (!apiKey) {
+        throw new Error("VLY_EMAIL_API_KEY environment variable is not set");
+      }
       await axios.post(
         "https://auth.freebuff.app/send_otp",
         {
@@ -26,7 +30,7 @@ export const emailOtp = Email({
         },
         {
           headers: {
-            "x-api-key": "fb_email_2crN1hqIArZP2bEfvjp5Qik4",
+            "x-api-key": apiKey,
           },
         },
       );

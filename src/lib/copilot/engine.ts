@@ -500,7 +500,6 @@ function answerCriticalSkus(state: WarehouseState): CopilotReply {
   let action: CopilotActionProposal | undefined;
   if (withPo) action = replenishProposal(state, withPo.sku);
   if (!action && withoutPo) {
-    const demand = demandForSku(state, withoutPo.sku).filter((o) => o.status !== "dispatched");
     const conflict = conflictForSku(state, withoutPo.sku);
     if (conflict) action = allocationProposal(state, conflict);
   }
@@ -1009,7 +1008,6 @@ function answerSummary(state: WarehouseState): CopilotReply {
 
 function answerFallback(state: WarehouseState, question: string): CopilotReply {
   const summary = answerSummary(state);
-  const sku = state.products.find((p) => p.stockStatus === "out" || p.stockStatus === "critical");
   return {
     answer: `I read your question as "${question.trim()}". I'm the WAREFLOW operational assistant — I can explain why orders are at risk, which SKUs need attention, what to prioritize, what happened during disruptions, and simulate or apply decisions.\n\nHere's the current picture:\n${summary.answer.split("\n").slice(1).join("\n")}`,
     facts: summary.facts,
