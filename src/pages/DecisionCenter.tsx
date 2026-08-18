@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { useWarehouse } from "@/lib/state/store";
 import { getAllocationConflict } from "@/lib/decision-engine/allocation-engine";
 import { PageHeader, Panel, MicroLabel, EmptyState } from "@/components/shared/ui";
@@ -9,6 +9,8 @@ import { fmtClock } from "@/lib/format";
 
 export default function DecisionCenter() {
   const { state, actions } = useWarehouse();
+  const [params] = useSearchParams();
+  const focusDecision = params.get("decision");
 
   const open = state.decisions.filter((d) => d.status === "open");
   const history = state.decisions.filter((d) => d.status !== "open");
@@ -53,6 +55,7 @@ export default function DecisionCenter() {
               key={d.id}
               decision={d}
               conflict={conflicts.get(d.id) ?? null}
+              className={focusDecision === d.id ? "outline outline-1 outline-signal-cyan/70" : undefined}
               onApply={(optionId) => actions.applyDecision(d.id, optionId)}
               onDismiss={() => actions.dismissDecision(d.id)}
               onSimulate={() => {

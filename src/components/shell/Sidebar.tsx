@@ -3,6 +3,7 @@ import { NavLink } from "react-router";
 import {
   AlertTriangle,
   BarChart3,
+  Bot,
   Boxes,
   ClipboardList,
   FlaskConical,
@@ -21,6 +22,7 @@ const NAV = [
   { to: "/orders", label: "Orders", icon: Package },
   { to: "/inventory", label: "Inventory", icon: Boxes },
   { to: "/decisions", label: "Decision Center", icon: Workflow },
+  { to: "/copilot", label: "Copilot", icon: Bot },
   { to: "/fulfillment", label: "Fulfillment", icon: ClipboardList },
   { to: "/exceptions", label: "Exception Center", icon: ShieldAlert },
   { to: "/simulator", label: "What-If Simulator", icon: FlaskConical },

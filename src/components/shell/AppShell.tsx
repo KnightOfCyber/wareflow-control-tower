@@ -1,6 +1,7 @@
 import { Outlet } from "react-router";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
+import { CopilotDrawer } from "@/components/copilot/CopilotDrawer";
 
 export function AppShell() {
   return (
@@ -15,6 +16,7 @@ export function AppShell() {
           WAREFLOW · decision-first warehouse operations · simulated shift data · deterministic engine
         </footer>
       </div>
+      <CopilotDrawer />
     </div>
   );
 }

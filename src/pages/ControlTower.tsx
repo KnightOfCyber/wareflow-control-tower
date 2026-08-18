@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router";
 import { useWarehouse } from "@/lib/state/store";
+import { useCopilot } from "@/lib/copilot/provider";
 import { getAllocationConflict } from "@/lib/decision-engine/allocation-engine";
 import { detectBottlenecks, zoneActivity } from "@/lib/decision-engine/bottleneck-engine";
 import { computeOrderRisk } from "@/lib/decision-engine/risk-engine";
@@ -10,7 +11,7 @@ import { ActivityFeed } from "@/components/shared/ActivityFeed";
 import { GenericTag, RiskBadge } from "@/components/shared/badges";
 import { Button } from "@/components/ui/button";
 import { fmtClock } from "@/lib/format";
-import { ArrowRight, FlaskConical, ShieldAlert } from "lucide-react";
+import { ArrowRight, Bot, FlaskConical, ShieldAlert } from "lucide-react";
 
 const STAGES = [
   { key: "queue", label: "QUEUE", statuses: ["created", "prioritized"] },
@@ -24,6 +25,7 @@ const STAGES = [
 
 export default function ControlTower() {
   const { state, actions } = useWarehouse();
+  const { setDrawerOpen } = useCopilot();
 
   const openDecision = state.decisions.find((d) => d.status === "open" && d.type === "allocation");
   const conflict = openDecision
@@ -257,6 +259,24 @@ export default function ControlTower() {
 
         <Panel title="Recommended next actions" accent="cyan" bodyClassName="p-3">
           <ul className="space-y-2.5">
+            <li>
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(true)}
+                className="group flex w-full items-start gap-2 rounded-[3px] border border-signal-cyan/50 bg-signal-cyan/[0.08] p-2.5 text-left transition-colors hover:bg-signal-cyan/15"
+              >
+                <Bot className="mt-0.5 size-3.5 shrink-0 text-signal-cyan" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-foreground">
+                    Ask Copilot
+                  </div>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Ask in plain language — Copilot reads live risk, stock and decisions, then proposes actions.
+                  </p>
+                </div>
+                <ArrowRight className="size-3.5 shrink-0 text-signal-cyan transition-transform group-hover:translate-x-0.5" />
+              </button>
+            </li>
             {openDecision && conflict && (
               <li>
                 <Link to="/decisions" className="group block rounded-[3px] border border-signal-amber/40 bg-signal-amber/[0.07] p-2.5 transition-colors hover:bg-signal-amber/15">
@@ -318,6 +338,17 @@ export default function ControlTower() {
           </ul>
         </Panel>
       </div>
+
+      {/* Ask Copilot — floating launch pad */}
+      <button
+        type="button"
+        onClick={() => setDrawerOpen(true)}
+        className="wf-scanlines fixed right-5 bottom-5 z-40 flex items-center gap-2 rounded-[3px] border border-signal-cyan/50 bg-background/95 px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-signal-cyan shadow-[0_0_18px_rgba(34,211,238,0.25)] backdrop-blur transition-all hover:border-signal-cyan hover:bg-signal-cyan/10 hover:shadow-[0_0_26px_rgba(34,211,238,0.4)]"
+      >
+        <Bot className="size-4" />
+        Ask Copilot
+        <span className="wf-live-dot" />
+      </button>
     </div>
   );
 }

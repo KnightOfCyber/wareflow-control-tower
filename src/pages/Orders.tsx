@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { useWarehouse } from "@/lib/state/store";
 import { computePriority, remainingSla } from "@/lib/decision-engine/priority-engine";
@@ -28,9 +28,11 @@ const STATUS_FILTERS: Array<{ key: OrderStatus | "all"; label: string }> = [
 
 export default function Orders() {
   const { state } = useWarehouse();
+  const [params] = useSearchParams();
+  const focusOrder = params.get("order");
   const [status, setStatus] = useState<OrderStatus | "all">("all");
   const [query, setQuery] = useState("");
-  const [openId, setOpenId] = useState<string | null>("1042");
+  const [openId, setOpenId] = useState<string | null>(focusOrder ?? "1042");
 
   const rows = useMemo(() => {
     let list = state.orders;
@@ -122,7 +124,11 @@ export default function Orders() {
                 return (
                   <Fragment key={o.id}>
                     <tr
-                      className={cn("cursor-pointer", isOpen && "bg-accent/60")}
+                      className={cn(
+                        "cursor-pointer",
+                        isOpen && "bg-accent/60",
+                        focusOrder === o.id && "outline outline-1 outline-signal-cyan/70",
+                      )}
                       onClick={() => setOpenId(isOpen ? null : o.id)}
                     >
                       <td>

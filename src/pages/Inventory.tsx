@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import { Search } from "lucide-react";
 import { useWarehouse } from "@/lib/state/store";
 import { PageHeader, Panel, MiniBar, EmptyState } from "@/components/shared/ui";
@@ -18,9 +19,11 @@ const STATUS_FILTERS: Array<{ key: StockStatus | "all"; label: string }> = [
 
 export default function Inventory() {
   const { state, actions } = useWarehouse();
+  const [params] = useSearchParams();
+  const focusSku = params.get("sku");
   const [status, setStatus] = useState<StockStatus | "all">("all");
   const [zone, setZone] = useState<ZoneId | "all">("all");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => focusSku ?? "");
 
   const rows = useMemo(() => {
     let list = state.products;
@@ -183,7 +186,10 @@ export default function Inventory() {
                 const total = p.available + p.reserved + p.damaged;
                 const coverRatio = total ? Math.min(100, (p.available / Math.max(1, p.safetyStock)) * 100) : 0;
                 return (
-                  <tr key={p.sku}>
+                  <tr
+                    key={p.sku}
+                    className={cn(focusSku === p.sku && "outline outline-1 outline-signal-cyan/70 bg-signal-cyan/[0.04]")}
+                  >
                     <td className="wf-mono text-signal-cyan">{p.sku}</td>
                     <td>
                       <div className="font-medium text-foreground">{p.name}</div>
