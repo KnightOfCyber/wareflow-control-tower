@@ -33,10 +33,15 @@ export function LogoDropdown() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-10 w-10">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Open workspace menu"
+          className="h-10 w-10 focus-visible:ring-2 focus-visible:ring-signal-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
           <img
             src={logo}
-            alt="Logo"
+            alt="Wareflow logo"
             width={32}
             height={32}
             className="rounded-lg"

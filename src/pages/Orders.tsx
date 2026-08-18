@@ -60,24 +60,30 @@ export default function Orders() {
         right={
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <label htmlFor="orders-search" className="sr-only">
+              Search orders
+            </label>
             <input
+              id="orders-search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search orders by order number, customer, or SKU"
               placeholder="Search order, customer, SKU…"
-              className="h-8 w-56 rounded-[3px] border border-input bg-muted/40 pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-signal-cyan focus:outline-none"
+              className="h-8 w-56 rounded-[3px] border border-input bg-muted/40 pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-signal-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             />
           </div>
         }
       />
 
-      <div className="mb-3 flex flex-wrap gap-1">
+      <div className="mb-3 flex flex-wrap gap-1" aria-label="Order status filters">
         {STATUS_FILTERS.map((f) => (
           <button
             key={f.key}
             type="button"
+            aria-label={`Filter orders by ${f.label.toLowerCase()} status`}
             onClick={() => setStatus(f.key)}
             className={cn(
-              "rounded-[3px] border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors",
+              "rounded-[3px] border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               status === f.key
                 ? "border-signal-cyan/50 bg-signal-cyan/10 text-signal-cyan"
                 : "border-border/70 bg-muted/30 text-muted-foreground hover:text-foreground",
@@ -124,12 +130,22 @@ export default function Orders() {
                 return (
                   <Fragment key={o.id}>
                     <tr
+                      tabIndex={0}
+                      role="button"
+                      aria-expanded={isOpen}
+                      aria-label={`Toggle details for order ${o.id}`}
                       className={cn(
-                        "cursor-pointer",
+                        "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                         isOpen && "bg-accent/60",
                         focusOrder === o.id && "outline outline-1 outline-signal-cyan/70",
                       )}
                       onClick={() => setOpenId(isOpen ? null : o.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setOpenId(isOpen ? null : o.id);
+                        }
+                      }}
                     >
                       <td>
                         {isOpen ? (

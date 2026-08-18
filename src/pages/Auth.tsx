@@ -121,14 +121,20 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             <>
               <CardHeader className="text-center">
               <div className="flex justify-center">
-                    <img
-                      src={logo}
-                      alt="Lock Icon"
-                      width={64}
-                      height={64}
-                      className="rounded-lg mb-4 mt-4 cursor-pointer"
+                    <button
+                      type="button"
+                      aria-label="Return to landing page"
+                      className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       onClick={() => navigate("/")}
-                    />
+                    >
+                      <img
+                        src={logo}
+                        alt="Wareflow logo"
+                        width={64}
+                        height={64}
+                        className="mb-4 mt-4 cursor-pointer rounded-lg"
+                      />
+                    </button>
                   </div>
                 <CardTitle className="text-xl">Get Started</CardTitle>
                 <CardDescription>
@@ -140,9 +146,14 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   
                   <div className="relative flex items-center gap-2">
                     <div className="relative flex-1">
+                      <label htmlFor="email" className="sr-only">
+                        Email address
+                      </label>
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
+                        id="email"
                         name="email"
+                        aria-label="Email address"
                         placeholder="name@example.com"
                         type="email"
                         className="pl-9"
@@ -152,6 +163,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     </div>
                     <Button
                       type="submit"
+                      aria-label="Send verification code"
                       variant="outline"
                       size="icon"
                       disabled={isLoading}
@@ -181,6 +193,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     
                     <Button
                       type="button"
+                      aria-label="Continue as guest"
                       variant="outline"
                       className="w-full mt-4"
                       onClick={handleGuestLogin}
@@ -208,6 +221,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
 
                   <div className="flex justify-center">
                     <InputOTP
+                      aria-label="Verification code"
                       value={otp}
                       onChange={setOtp}
                       maxLength={6}
@@ -237,7 +251,9 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   <p className="text-sm text-muted-foreground text-center mt-4">
                     Didn't receive a code?{" "}
                     <Button
+                      type="button"
                       variant="link"
+                      aria-label="Try a different email"
                       className="p-0 h-auto"
                       onClick={() => setStep("signIn")}
                     >
@@ -248,6 +264,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 <CardFooter className="flex-col gap-2">
                   <Button
                     type="submit"
+                    aria-label="Verify email code"
                     className="w-full"
                     disabled={isLoading || otp.length !== 6}
                   >
@@ -265,6 +282,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   </Button>
                   <Button
                     type="button"
+                    aria-label="Use a different email"
                     variant="ghost"
                     onClick={() => setStep("signIn")}
                     disabled={isLoading}

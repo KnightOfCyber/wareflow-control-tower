@@ -29,7 +29,6 @@ function renderInline(text: string): React.ReactNode[] {
 
 export function MiniMarkdown({ text }: { text: string }) {
   const lines = text.split("\n");
-  let numbered = 0;
   return (
     <div className="space-y-1.5">
       {lines.map((line, i) => {
@@ -48,7 +47,6 @@ export function MiniMarkdown({ text }: { text: string }) {
 
         const numberedMatch = trimmed.match(/^(\d+)[.)]\s+(.*)$/);
         if (numberedMatch) {
-          numbered += 1;
           return (
             <div key={i} className="flex gap-2 text-xs leading-relaxed text-muted-foreground">
               <span className="wf-mono shrink-0 text-signal-amber">{numberedMatch[1]}.</span>

@@ -3,6 +3,7 @@ import { buildSeed } from "../src/lib/data/seed";
 import { refreshDerived } from "../src/lib/state/derived";
 import { triggerDisruption, triggerFullChaos } from "../src/lib/simulation/chaos-engine";
 import { buildRecoveryPlan } from "../src/lib/decision-engine/recovery-engine";
+import type { RecoveryStep, WarehouseState } from "../src/types";
 
 function fresh() {
   const s = buildSeed();
@@ -10,7 +11,7 @@ function fresh() {
   return s;
 }
 
-function describeDisruption(s: any) {
+function describeDisruption(s: WarehouseState) {
   for (const d of s.chaos.disruptions) {
     console.log(`  ${d.id} [${d.kind}] ${d.title}`);
     console.log(`    detail: ${d.detail}`);
@@ -31,7 +32,7 @@ console.log("=== SINGLE: Picker unavailable ===");
   for (const st of plan.steps) console.log(`  [${st.type}] ${st.title} — ${st.detail} → ${JSON.stringify(st.payload)}`);
   console.log(`PREDICTED: risk ${plan.riskBefore} → ${plan.riskAfter} | SLA failures ${plan.slaFailuresBefore} → ${plan.slaFailuresAfter}`);
   console.log(`improvement: ${plan.predictedImprovement.join(" | ")}`);
-  console.log(`replenish steps in picker plan: ${plan.steps.filter((x: any) => x.type === "replenish").length} (only from independent inventory shortage)`);
+  console.log(`replenish steps in picker plan: ${plan.steps.filter((x: RecoveryStep) => x.type === "replenish").length} (only from independent inventory shortage)`);
 }
 
 console.log("\n=== SINGLE: Stock damage SKU-106 ===");

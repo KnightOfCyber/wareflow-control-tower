@@ -74,7 +74,10 @@ export function CopilotProvider({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const stateRef = useRef(state);
-  stateRef.current = state;
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   const pendingApply = useRef<PendingApply | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

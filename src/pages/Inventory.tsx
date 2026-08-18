@@ -50,11 +50,16 @@ export default function Inventory() {
         right={
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <label htmlFor="inventory-search" className="sr-only">
+              Search inventory
+            </label>
             <input
+              id="inventory-search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search inventory by SKU, product, or category"
               placeholder="Search SKU, product, category…"
-              className="h-8 w-60 rounded-[3px] border border-input bg-muted/40 pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-signal-cyan focus:outline-none"
+              className="h-8 w-60 rounded-[3px] border border-input bg-muted/40 pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-signal-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             />
           </div>
         }
